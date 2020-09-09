@@ -1,0 +1,281 @@
+module lcd_ctrl(clk, reset, datain, cmd, cmd_valid, dataout, output_valid, busy);
+input           clk;
+input           reset;
+input   [7:0]   datain;
+input   [2:0]   cmd;
+input           cmd_valid;
+output  reg     [7:0]dataout;
+output  reg     output_valid;
+output  reg     busy;
+reg   [7:0]buffer[107:0]; 
+reg   [6:0]count;
+reg   [3:0]out_count;
+reg   [6:0]origin;
+reg   [1:0]state;
+reg   valid, sign;
+
+parameter load = 3'd0,
+          in = 3'd1,
+          fit = 3'd2,
+          right = 3'd3,
+          left = 3'd4,
+          up = 3'd5,
+          down = 3'd6;  
+integer i;         
+
+always@(posedge clk)
+begin
+  if(reset)
+    begin
+      output_valid <= 1'b0;
+      busy <= 1'b0;
+      count <= 7'd0;
+      out_count <= 4'd0;
+      origin <= 7'd0;
+      state <= 2'd0;
+      valid <= 1'b0;
+      sign <= 1'b0;
+      for(i = 0; i < 108; i = i + 1)
+        buffer[i] <= 0;
+    end
+  else
+    begin
+      if(cmd_valid)
+        begin
+          if(!busy)
+            begin
+              busy <= 1'b1;
+              case(state)
+                2'd0:begin
+                  if(cmd == load)
+                    begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      valid <= 1'b1;
+                      output_valid <= 1'b0;
+                      sign <= 1'b1;
+                    end
+                  else
+                    begin
+                      state <= 2'd0;
+                      origin <= 7'd0;
+                      valid <= 1'b0;
+                      output_valid <= 1'b1;
+                      sign <= 1'b0;
+                    end
+                end
+                2'd1:begin
+                  case(cmd)
+                    load:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      valid <= 1'b1;
+                      output_valid <= 1'b0;
+                      sign <= 1'b1;
+                    end
+                    in:begin
+                      state <= 2'd2;
+                      origin <= 7'd40;
+                      output_valid <= 1'b1;
+                      sign <= 1'b0;
+                    end
+                    fit:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      output_valid <= 1'b1;
+                      sign <= 1'b1;
+                    end
+                    right:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      output_valid <= 1'b1;
+                      sign <= 1'b1;
+                    end
+                    left:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      output_valid <= 1'b1;
+                      sign <= 1'b1;
+                    end
+                    up:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      output_valid <= 1'b1;
+                      sign <= 1'b1;
+                    end
+                    down:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      output_valid <= 1'b1;
+                      sign <= 1'b1;
+                    end
+                    default:begin
+                      state <= 2'd0;
+                      origin <= origin;
+                      output_valid <= 1'b0;
+                      sign <= 1'b0;
+                    end
+                  endcase
+                end
+                2'd2:begin
+                  case(cmd)
+                    load:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      valid <= 1'b1;
+                      output_valid <= 1'b0;
+                      sign <= 1'b1;
+                    end
+                    in:begin
+                      state <= 2'd2;
+                      origin <= origin;
+                      output_valid <= 1'b1;
+                      sign <= 1'b0;
+                    end
+                    fit:begin
+                      state <= 2'd1;
+                      origin <= 7'd13;
+                      output_valid <= 1'b1;
+                      sign <= 1'b1;
+                    end
+                    right:begin
+                      state <= 2'd2;
+                      output_valid <= 1'b1;
+                      sign <= 1'b0;
+                      if(origin == 7'd8 || origin == 7'd20 || origin == 7'd32 || origin == 7'd44 || origin == 7'd56 || origin == 7'd68)
+                        origin <= origin;
+                      else
+                        origin <= origin + 1;
+                    end
+                    left:begin
+                      state <= 2'd2;
+                      output_valid <= 1'b1;
+                      sign <= 1'b0;
+                      if(origin == 7'd0 || origin == 7'd12 || origin == 7'd24 || origin == 7'd36 || origin == 7'd48 || origin == 7'd60)
+                      if(origin ==7'd0 || origin == 7'd12 || origin == 7'd24 || origin == 7'd36 || origin == 7'd48 || origin == 7'd60)
+                        origin <= origin;
+                      else
+                        origin <= origin - 1;
+                    end
+                    up:begin
+                      state <= 2'd2;
+                      output_valid <= 1'b1;
+                      sign <= 1'b0;
+                      if(origin == 0 || origin == 1 || origin == 2 || origin == 3 || origin == 4 || origin == 5 || origin == 6 || origin == 7 || origin == 8)
+                        origin <= origin;
+                      else
+                        origin <= origin - 12;
+                    end
+                    down:begin
+                      state <= 2'd2;
+                      output_valid <= 1'b1;
+                      sign <= 1'b0;
+                      if(origin == 60 || origin == 61 || origin == 62 || origin == 63 || origin == 64 || origin == 65 || origin == 66 || origin == 67 || origin == 68)
+                        origin <= origin;
+                      else
+                        origin <= origin + 12;
+                    end
+                    default:begin
+                      state <= 2'd0;
+                      sign <= 1'b0;
+                      origin <= origin;
+                      output_valid <= 1'b0;
+                    end
+                  endcase
+                end
+                default:begin
+                  state <= 2'd0;
+                  origin <= origin;
+                  output_valid <= 1'b0;
+                  sign <= 1'b0;
+                end
+              endcase
+            end
+          else
+            begin
+              origin <= origin;
+              valid <= valid;
+              output_valid <= output_valid;
+              sign <= sign;
+            end
+        end
+      else
+        begin
+          if(valid)
+            begin
+              if(count == 7'd108)
+                begin
+                  count <= 7'd0;
+                  output_valid <= 1;
+                  valid <= 0;
+                end
+              else
+                begin
+                  buffer[count] <= datain;
+                  count <= count + 1;
+                end
+            end
+          else
+            begin
+              if(output_valid)
+                begin
+                  if(out_count == 4'd15)
+                    begin
+                      out_count <= 4'd0;
+                      output_valid <= 0;
+                      busy <= 0;
+                      if(sign)
+                        origin <= origin - 81;
+                      else
+                        origin <= origin - 39;
+                    end
+                  else
+                    begin
+                      out_count <= out_count + 1;
+                      if(sign)
+                        begin
+                          if(out_count == 4'd3 || out_count == 4'd7 || out_count == 4'd11)
+                            begin
+                              origin <= origin + 15;
+                            end
+                          else
+                            begin
+                              origin <= origin + 3;
+                            end
+                        end
+                      else
+                        begin
+                          if(out_count == 4'd3 || out_count == 4'd7 || out_count == 4'd11)
+                            begin
+                              origin <= origin + 9;
+                            end
+                          else
+                            begin
+                              origin <= origin + 1;
+                            end
+                        end                     
+                    end
+                end
+              else
+                begin
+                  origin <= origin;
+                  valid <= valid;
+                 	output_valid <= output_valid;
+                end
+            end
+        end   
+    end       
+end        
+always@(negedge clk)
+begin
+  if(reset)
+      dataout <= 8'd0;     
+  else
+    begin
+    if(valid)
+        dataout <= 8'd0;
+    else
+        dataout <= buffer[origin];
+  end 
+end                                                             
+endmodule
